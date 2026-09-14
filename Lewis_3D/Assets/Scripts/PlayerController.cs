@@ -9,6 +9,7 @@ public class PlayerController : MonoBehaviour
 
     PlayerInput playerInput;
     Rigidbody rb;
+    Camera playerCam;
 
     Ray jumpRay;
     Vector2 moveInput;
@@ -23,19 +24,25 @@ public class PlayerController : MonoBehaviour
         // Setting up new move Vector
         moveInput = Vector2.zero;
 
+        playerCam = Camera.main;
+
         jumpRay = new Ray(transform.position, -transform.up);
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     // Update is called once per frame
     void Update()
     {
+
         jumpRay.origin = transform.position;
         jumpRay.direction = -transform.up;
 
         Vector3 tempMove = rb.linearVelocity;
 
-        tempMove.x = (moveInput.x * speed) * transform.right.x;
-        tempMove.z = (moveInput.y * speed) * transform.forward.z;
+        tempMove.x = (moveInput.x * speed);
+        tempMove.z = (moveInput.y * speed);
 
         rb.linearVelocity = tempMove;
     }
