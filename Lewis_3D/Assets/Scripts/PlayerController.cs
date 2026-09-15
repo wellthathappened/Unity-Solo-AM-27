@@ -1,3 +1,4 @@
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,9 +8,10 @@ public class PlayerController : MonoBehaviour
     public float jumpHeight = 10f;
     public float jumpDetectDistance = 1.1f;
 
+    CinemachinePositionComposer cineCam;
+    Camera playerCam;
     PlayerInput playerInput;
     Rigidbody rb;
-    Camera playerCam;
 
     Ray jumpRay;
     Vector2 moveInput;
@@ -21,10 +23,11 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         playerInput = GetComponent<PlayerInput>();
 
+        playerCam = Camera.main;
+        cineCam = GameObject.Find("CinemachineCamera").GetComponent<CinemachinePositionComposer>();
+
         // Setting up new move Vector
         moveInput = Vector2.zero;
-
-        playerCam = Camera.main;
 
         jumpRay = new Ray(transform.position, -transform.up);
 
@@ -32,10 +35,17 @@ public class PlayerController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
     }
 
+    private void FixedUpdate()
+    {
+        Quaternion playerRotation = Quaternion.identity;
+        playerRotation.y = playerCam.transform.rotation.y;
+        playerRotation.w = playerCam.transform.rotation.w;
+        transform.rotation = playerRotation;
+    }
+
     // Update is called once per frame
     void Update()
     {
-
         jumpRay.origin = transform.position;
         jumpRay.direction = -transform.up;
 
@@ -44,7 +54,9 @@ public class PlayerController : MonoBehaviour
         tempMove.x = (moveInput.x * speed);
         tempMove.z = (moveInput.y * speed);
 
-        rb.linearVelocity = tempMove;
+        rb.linearVelocity = (tempMove.x * transform.right) +
+                            (tempMove.y * transform.up) +
+                            (tempMove.z * transform.forward);
     }
 
     public void Move(InputAction.CallbackContext context)
@@ -58,5 +70,10 @@ public class PlayerController : MonoBehaviour
         {
             rb.AddForce(transform.up * jumpHeight, ForceMode.Impulse);
         }
+    }
+
+    public void shoulderSwap()
+    {
+        cineCam.TargetOffset.x *= -1;
     }
 }
