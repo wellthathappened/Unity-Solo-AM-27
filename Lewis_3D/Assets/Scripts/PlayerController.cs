@@ -23,6 +23,8 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         playerInput = GetComponent<PlayerInput>();
 
+        
+
         playerCam = Camera.main;
         cineCam = GameObject.Find("CinemachineCamera").GetComponent<CinemachinePositionComposer>();
 
