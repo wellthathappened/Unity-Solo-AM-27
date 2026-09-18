@@ -1,15 +1,20 @@
+using System.Collections;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 public class PlayerController : MonoBehaviour
 {
     public bool isAttacking = false;
+    public bool hazardDamage = false;
 
-    public float speed = 5.0f;
-    public float jumpHeight = 10f;
+    public int health = 5;
+    public float speed = 5;
+    public float jumpHeight = 10;
     public float jumpDetectDistance = 1.1f;
-    public float interactDistance = 6f;
+    public float interactDistance = 6;
+    public float hazardCooldown = 3;
 
     CinemachinePositionComposer cineCam;
     Camera playerCam;
@@ -57,6 +62,10 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Die
+        if(health <= 0)
+        { }
+
         jumpRay.origin = transform.position;
         jumpRay.direction = -transform.up;
 
@@ -129,13 +138,79 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    public void Interact()
+    public void Interact(InputAction.CallbackContext context)
     {
+        if(context.ReadValueAsButton())
+        {
+            if (pickupObj)
+            {
+                if (pickupObj.tag == "Weapon")
+                {
+                    pickupObj.GetComponent<Weapon>().equip(this);
+                }
 
+                /* Pickup Ammo with Interact
+                if (pickupObj.tag == "Ammo")
+                {
+                    Destroy(pickupObj);
+                    currentWeapon.ammo += currentWeapon.ammoRefill;
+                }
+                */
+            }
+            else if (currentWeapon)
+                Reload();
+        }
     }
 
     public void DropWeapon()
     {
+        if (currentWeapon)
+            currentWeapon.unequip();
+    }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        if(collision.gameObject.tag == "Ammo")
+        {
+            if(currentWeapon && currentWeapon.ammo < currentWeapon.maxAmmo)
+            {
+                int ammoFill = currentWeapon.maxAmmo - currentWeapon.ammo;
+
+                if (ammoFill < currentWeapon.ammoRefill)
+                {
+                    currentWeapon.ammo += ammoFill;
+                }
+                else
+                {
+                    currentWeapon.ammo += currentWeapon.ammoRefill;
+                }
+
+                Destroy(collision.gameObject);
+            }
+        }
+
+        if(collision.gameObject.tag == "Hazard")
+        {
+            health--;
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (collision.gameObject.tag == "Hazard")
+        {
+            if(!hazardDamage)
+                StartCoroutine("damageCooldown");
+        }
+    }
+
+    IEnumerator damageCooldown()
+    {
+        hazardDamage = true;
+
+        yield return new WaitForSeconds(hazardCooldown);
+
+        health--;
+        hazardDamage = false;
     }
 }
