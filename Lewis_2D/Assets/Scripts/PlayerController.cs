@@ -92,7 +92,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
     public void DropEquipment()
     {
         if(currentEquipment != null)
