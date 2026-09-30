@@ -23,10 +23,10 @@ public class PlayerController : MonoBehaviour
     public float jumpActivate = 5f;
     public float jumpBoostTimer = 0f;
 
+    public bool onGround = true;
     public bool sprinting = false;
     public bool canSprint = true;
-    public bool sprintStop = false;
-    public bool staminaStop = false;
+    public bool sprintLock = false;
     public bool regenStamina = false;
     public bool toggleSprint = true;
     public bool jumpBoostActivated = false;
@@ -61,8 +61,10 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        onGround = Physics2D.Raycast(jumpRay.origin, jumpRay.direction, jumpDetectDistance);
+
         // Counts the amount of seconds that have passed since boost activation
-        if(jumpBoostActivated)
+        if (jumpBoostActivated)
         {
             if(jumpBoostTimer >= jumpActivate)
             {
@@ -80,20 +82,25 @@ public class PlayerController : MonoBehaviour
 
         tempMove.x = moveInput.x * speed;
 
-        if(sprinting)
+        if (sprinting)
         {
-            if ((moveInput.x == 1 || moveInput.x == -1) && stamina > 0)
+            if (stamina > 0)
             {
                 tempMove.x *= sprintBoost;
 
                 stamina -= sprintCost * Time.deltaTime;
 
-                if (stamina < 0)
-                    stamina = 0;
+                StopCoroutine("sprintReset");
+                regenStamina = false;
 
-                StopCoroutine("staminaReset");
+                if (stamina <= 0)
+                {
+                    canSprint = false;
+                    sprinting = false;
+                    stamina = 0;
+                }
             }
-            else
+            if (moveInput.x == 0)
             {
                 canSprint = false;
                 sprinting = false;
@@ -102,11 +109,7 @@ public class PlayerController : MonoBehaviour
 
         if (!sprinting)
         {
-            if (!regenStamina && !staminaStop && stamina < maxStamina)
-            {
-                StartCoroutine("staminaReset");
-            }
-            if (!canSprint && !sprintStop)
+            if (!canSprint && !sprintLock)
             {
                 StartCoroutine("sprintReset");
             }
@@ -132,7 +135,7 @@ public class PlayerController : MonoBehaviour
 
     public void Sprint(InputAction.CallbackContext context)
     {
-        if (canSprint)
+        if (canSprint && (moveInput.x == 1 || moveInput.x == -1) && onGround)
         {
             if (toggleSprint)
             {
@@ -150,7 +153,7 @@ public class PlayerController : MonoBehaviour
 
     public void Jump()
     {
-        if (Physics2D.Raycast(jumpRay.origin, jumpRay.direction, jumpDetectDistance))
+        if (onGround)
             rb.AddForceY(jumpHeight,ForceMode2D.Impulse);
     }
 
@@ -214,21 +217,13 @@ public class PlayerController : MonoBehaviour
 
     IEnumerator sprintReset()
     {
-        sprintStop = true;
+        sprintLock = true;
+        regenStamina = false;
 
         yield return new WaitForSeconds(sprintCooldown);
 
         canSprint = true;
-        sprintStop = false;
-    }
-
-    IEnumerator staminaReset()
-    {
-        staminaStop = true;
-
-        yield return new WaitForSeconds(staminaCooldown);
-
         regenStamina = true;
-        staminaStop = false;
+        sprintLock = false;
     }
 }
