@@ -100,7 +100,7 @@ public class PlayerController : MonoBehaviour
                     stamina = 0;
                 }
             }
-            if (moveInput.x == 0)
+            if (moveInput.x < .75f && moveInput.x > -.75f)
             {
                 canSprint = false;
                 sprinting = false;
@@ -112,6 +112,10 @@ public class PlayerController : MonoBehaviour
             if (!canSprint && !sprintLock)
             {
                 StartCoroutine("sprintReset");
+            }
+            if (canSprint && !regenStamina)
+            {
+                regenStamina = true;
             }
             if (regenStamina)
             {
@@ -135,7 +139,7 @@ public class PlayerController : MonoBehaviour
 
     public void Sprint(InputAction.CallbackContext context)
     {
-        if (canSprint && (moveInput.x == 1 || moveInput.x == -1) && onGround)
+        if (canSprint && (moveInput.x >= .75f || moveInput.x <= -.75f) && onGround)
         {
             if (toggleSprint)
             {
@@ -143,7 +147,10 @@ public class PlayerController : MonoBehaviour
             }
             else if (!toggleSprint)
             {
-                sprinting = context.ReadValueAsButton();
+                if (context.ReadValueAsButton())
+                    sprinting = true;
+                else
+                    sprinting = false;
 
                 if (!sprinting)
                     canSprint = false;
