@@ -1,9 +1,21 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    public int health = 5;
+    public int maxHealth = 5;
+    public float stamina = 100f;
+    public float maxStamina = 100f;
+    public float sprintCost = .1f;
     public float speed = 5.0f;
+
+    public float sprintCooldown = 2;
+    public float staminaRegen = 5;
+    public float staminaCooldown = 2;
+
+    public float sprintBoost = 2.0f;
     public float jumpHeight = 10f;
     public float jumpBoost = 5f;
     public float jumpDetectDistance = .1f;
@@ -11,6 +23,12 @@ public class PlayerController : MonoBehaviour
     public float jumpActivate = 5f;
     public float jumpBoostTimer = 0f;
 
+    public bool sprinting = false;
+    public bool canSprint = true;
+    public bool sprintStop = false;
+    public bool staminaStop = false;
+    public bool regenStamina = false;
+    public bool toggleSprint = true;
     public bool jumpBoostActivated = false;
 
     PlayerInput playerInput;
@@ -62,12 +80,72 @@ public class PlayerController : MonoBehaviour
 
         tempMove.x = moveInput.x * speed;
 
+        if(sprinting)
+        {
+            if ((moveInput.x == 1 || moveInput.x == -1) && stamina > 0)
+            {
+                tempMove.x *= sprintBoost;
+
+                stamina -= sprintCost * Time.deltaTime;
+
+                if (stamina < 0)
+                    stamina = 0;
+
+                StopCoroutine("staminaReset");
+            }
+            else
+            {
+                canSprint = false;
+                sprinting = false;
+            }
+        }
+
+        if (!sprinting)
+        {
+            if (!regenStamina && !staminaStop && stamina < maxStamina)
+            {
+                StartCoroutine("staminaReset");
+            }
+            if (!canSprint && !sprintStop)
+            {
+                StartCoroutine("sprintReset");
+            }
+            if (regenStamina)
+            {
+                stamina += staminaRegen * Time.deltaTime;
+
+                if (stamina >= maxStamina)
+                {
+                    stamina = maxStamina;
+                    regenStamina = false;
+                }
+            }
+        }
+
         rb.linearVelocity = tempMove;
     }
 
     public void Move(InputAction.CallbackContext context)
     {
         moveInput.x = context.ReadValue<Vector2>().x;
+    }
+
+    public void Sprint(InputAction.CallbackContext context)
+    {
+        if (canSprint)
+        {
+            if (toggleSprint)
+            {
+                sprinting = !sprinting;
+            }
+            else if (!toggleSprint)
+            {
+                sprinting = context.ReadValueAsButton();
+
+                if (!sprinting)
+                    canSprint = false;
+            }
+        }
     }
 
     public void Jump()
@@ -132,5 +210,25 @@ public class PlayerController : MonoBehaviour
             }
             */
         }
+    }
+
+    IEnumerator sprintReset()
+    {
+        sprintStop = true;
+
+        yield return new WaitForSeconds(sprintCooldown);
+
+        canSprint = true;
+        sprintStop = false;
+    }
+
+    IEnumerator staminaReset()
+    {
+        staminaStop = true;
+
+        yield return new WaitForSeconds(staminaCooldown);
+
+        regenStamina = true;
+        staminaStop = false;
     }
 }
