@@ -63,16 +63,19 @@ public class PlayerController : MonoBehaviour
     {
         onGround = Physics2D.Raycast(jumpRay.origin, jumpRay.direction, jumpDetectDistance);
 
-        // Counts the amount of seconds that have passed since boost activation
-        if (jumpBoostActivated)
+        if (currentEquipment)
         {
-            if(jumpBoostTimer >= jumpActivate)
+            // Counts the amount of seconds that have passed since boost activation
+            if (currentEquipment.name == "Jump")
             {
-                jumpHeight -= jumpBoost;
-                jumpBoostActivated = false;
-            }
+                if (jumpBoostTimer >= jumpActivate)
+                {
+                    jumpHeight -= jumpBoost;
+                    jumpBoostActivated = false;
+                }
 
-            jumpBoostTimer += Time.deltaTime;
+                jumpBoostTimer += Time.deltaTime;
+            }
         }
 
         jumpRay.origin = transform.position;
@@ -177,6 +180,8 @@ public class PlayerController : MonoBehaviour
 
                 currentEquipment = null;
             }
+
+            // Add new if check for a new type of equipment
         }
     }
 
@@ -193,10 +198,12 @@ public class PlayerController : MonoBehaviour
                 jumpHeight -= jumpBoost;
             }
 
+            /* Example of checking if you have a speed power up
             if (currentEquipment.name == "Speed")
             {
                 // Reduce speed
             }
+            */
 
             currentEquipment = null;
 

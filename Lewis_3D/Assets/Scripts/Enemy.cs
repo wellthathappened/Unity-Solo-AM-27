@@ -22,6 +22,12 @@ public class Enemy : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (health <= 0)
+        {
+            GameObject.Find("GameManager").GetComponent<GameManager>().enemyCount--;
+            Destroy(gameObject);
+        }
+
         float targetDistance = Mathf.Abs(Vector3.Distance(player.transform.position, transform.position));
 
         isFollowing = targetDistance <= detectionRange;

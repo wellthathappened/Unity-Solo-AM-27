@@ -1,12 +1,15 @@
 using System.Collections;
+using System.Threading;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
     public bool isAttacking = false;
     public bool hazardDamage = false;
+    public bool onGround = false;
 
     [Header("Player Stats")]
     public int health = 5;
@@ -27,12 +30,10 @@ public class PlayerController : MonoBehaviour
     public float staminaCooldown = 2;
     public bool sprinting = false;
     public bool canSprint = true;
-    public bool sprintStop = false;
+    public bool sprintLock = false;
     public bool staminaStop = false;
     public bool regenStamina = false;
     public bool toggleSprint = true;
-
-
 
     CinemachinePositionComposer cineCam;
     Camera playerCam;
@@ -68,6 +69,7 @@ public class PlayerController : MonoBehaviour
         weaponSlot = transform.GetChild(0);
 
         // Hide my mouse and prevent it from going off screen
+        
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
     }
@@ -91,6 +93,8 @@ public class PlayerController : MonoBehaviour
         // Jump Ray update
         jumpRay.origin = transform.position;
         jumpRay.direction = -transform.up;
+
+        onGround = Physics.Raycast(jumpRay, jumpDetectDistance);
 
         // Interact Ray update
         interactRay.origin = playerCam.transform.position;
@@ -123,6 +127,54 @@ public class PlayerController : MonoBehaviour
         tempMove.x = (moveInput.x * speed);
         tempMove.z = (moveInput.y * speed);
 
+        if (sprinting)
+        {
+            if (stamina > 0)
+            {
+                tempMove.z *= sprintBoost;
+
+                stamina -= sprintCost * Time.deltaTime;
+
+                StopCoroutine("sprintReset");
+                regenStamina = false;
+
+                if (stamina <= 0)
+                {
+                    canSprint = false;
+                    sprinting = false;
+                    stamina = 0;
+                }
+            }
+
+            // Comment this out if you want a more versatile/forgiving sprint
+            if (moveInput.y < .75f)
+            {
+                canSprint = false;
+                sprinting = false;
+                regenStamina = false;
+            }
+        }
+
+        if (!sprinting)
+        {
+            if (!canSprint && !sprintLock)
+                StartCoroutine("sprintReset");
+
+            if (canSprint && !regenStamina)
+                regenStamina = true;
+
+            if (regenStamina)
+            {
+                stamina += staminaRegen * Time.deltaTime;
+
+                if (stamina >= maxStamina)
+                {
+                    stamina = maxStamina;
+                    regenStamina = false;
+                }
+            }
+        }
+
         // Normalize move vector to be relative to player's forward facing direction 
         rb.linearVelocity = (tempMove.x * transform.right) +
                             (tempMove.y * transform.up) +
@@ -135,6 +187,27 @@ public class PlayerController : MonoBehaviour
         moveInput = context.ReadValue<Vector2>();
     }
 
+    public void Sprint(InputAction.CallbackContext context)
+    {
+        if (canSprint && (moveInput.y >= .75f) && onGround)
+        {
+            if (!toggleSprint)
+            {
+                if (context.ReadValueAsButton())
+                    sprinting = true;
+                else
+                {
+                    sprinting = false;
+                    canSprint = false;
+                }
+            }
+            else
+                if (context.performed)
+                sprinting = !sprinting;
+        }
+    }
+
+
     // Jump action
     public void Jump()
     {
@@ -142,7 +215,7 @@ public class PlayerController : MonoBehaviour
         // ** NOTE **
         // If you are jumping on invisible collision, check your Physics settings
         // as you may have "Queries hit triggers" checked off (raycast hitting trigger colliders)
-        if (Physics.Raycast(jumpRay, jumpDetectDistance))
+        if (onGround)
         {
             rb.AddForce(transform.up * jumpHeight, ForceMode.Impulse);
         }
@@ -182,6 +255,21 @@ public class PlayerController : MonoBehaviour
                 currentWeapon.fire();
         }
     }
+
+    public void changeFireMode()
+    {
+        if(currentWeapon)
+        {
+            if(currentWeapon.fireModes >= 2)
+            {
+                if(currentWeapon.weaponID == 1)
+                {
+                    currentWeapon.GetComponent<Rifle>().changeFireMode();
+                }
+            }
+        }
+    }
+
 
     // Interact action
     public void Interact(InputAction.CallbackContext context)
@@ -265,6 +353,11 @@ public class PlayerController : MonoBehaviour
         {
             health--;
         }
+
+        if(collision.gameObject.tag == "LevelEnd" && GameObject.Find("GameManager").GetComponent<GameManager>().enemiesGone)
+        {
+            GameObject.Find("GameManager").GetComponent<GameManager>().LoadLevel(SceneManager.GetActiveScene().buildIndex + 1);
+        }
     }
 
     private void OnCollisionStay(Collision collision)
@@ -301,4 +394,17 @@ public class PlayerController : MonoBehaviour
         health--;
         hazardDamage = false;
     }
+
+    IEnumerator sprintReset()
+    {
+        sprintLock = true;
+        regenStamina = false;
+
+        yield return new WaitForSeconds(sprintCooldown);
+
+        canSprint = true;
+        regenStamina = true;
+        sprintLock = false;
+    }
+
 }
