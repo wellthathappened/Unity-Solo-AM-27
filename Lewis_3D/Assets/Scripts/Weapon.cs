@@ -4,6 +4,7 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     PlayerController player;
+    AudioSource speaker;
 
     public GameObject projectile;
     public Transform firePoint;
@@ -37,6 +38,7 @@ public class Weapon : MonoBehaviour
     {
         firePoint = transform.GetChild(0);
         firingDirection = Camera.main;
+        speaker = GetComponent<AudioSource>();
     }
 
     // Assign player to the weapon (think locked by thumbprint)
@@ -84,6 +86,7 @@ public class Weapon : MonoBehaviour
             // Destroy the bullet after a specified amount of time (projLifespan)
             // Subtract the ammo
             // Start a countdown to be able to shoot again
+            speaker.Play();
             GameObject p = Instantiate(projectile, firePoint.position, firePoint.rotation);
             p.GetComponent<Rigidbody>().AddForce(firingDirection.transform.forward * projVelocity);
             Destroy(p, projLifespan);
